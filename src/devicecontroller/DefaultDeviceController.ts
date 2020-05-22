@@ -80,14 +80,14 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
   }
 
   async chooseAudioInputDevice(device: Device): Promise<DevicePermission> {
-    const result = await this.chooseInputDevice('audio', device, false);
+    const result = await this.chooseAudioInputDeviceInternal(device);
     this.trace('chooseAudioInputDevice', device, DevicePermission[result]);
     return result;
   }
 
   async chooseVideoInputDevice(device: Device): Promise<DevicePermission> {
     this.updateMaxBandwidthKbps();
-    const result = await this.chooseInputDevice('video', device, false);
+    const result = await this.chooseVideoInputDeviceInternal(device, false);
     this.trace('chooseVideoInputDevice', device, DevicePermission[result]);
     return result;
   }
@@ -471,12 +471,71 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
     return device && device.id ? device : null;
   }
 
-  private async chooseInputDevice(
-    kind: string,
-    device: Device,
-    fromAcquire: boolean
-  ): Promise<DevicePermission> {
-    if (device === null && kind === 'video') {
+  private async chooseAudioInputDeviceInternal(device: Device): Promise<DevicePermission> {
+    const kind = 'audio';
+    const proposedConstraints: MediaStreamConstraints | null = this.calculateMediaStreamConstraints(
+      kind,
+      device
+    );
+
+    if (
+      this.activeDevices[kind] &&
+      this.activeDevices[kind].matchesConstraints(proposedConstraints) &&
+      this.activeDevices[kind].stream.active
+    ) {
+      this.logger.info(`reusing existing audio device`);
+      return DevicePermission.PermissionGrantedPreviously;
+    }
+
+    if (this.activeDevices[kind]) {
+      this.releaseMediaStream(this.activeDevices[kind].stream);
+    }
+
+    const startTimeMs = Date.now();
+    try {
+      this.logger.info(`requesting new audio device with constraint ${proposedConstraints}`);
+      if (device === null) {
+        const deviceSelection = new DeviceSelection();
+        deviceSelection.stream = DefaultDeviceController.createEmptyAudioDevice() as MediaStream;
+        deviceSelection.constraints = null;
+        this.activeDevices[kind] = deviceSelection;
+      } else {
+        this.activeDevices[kind] = await this.getDeviceSelection(kind, device, proposedConstraints);
+      }
+      this.logger.info(`got audio device for constraints ${JSON.stringify(proposedConstraints)}`);
+    } catch (error) {
+      this.logger.error(
+        `failed to get audio device for constraints ${JSON.stringify(proposedConstraints)}: ${
+          error.message
+        }`
+      );
+      return Date.now() - startTimeMs <
+        DefaultDeviceController.permissionDeniedOriginDetectionThresholdMs
+        ? DevicePermission.PermissionDeniedByBrowser
+        : DevicePermission.PermissionDeniedByUser;
+    }
+
+    if (this.useWebAudio) {
+      this.attachAudioInputStreamToAudioContext(this.activeDevices[kind].stream);
+    } else if (this.boundAudioVideoController) {
+      try {
+        await this.boundAudioVideoController.restartLocalAudio(() => {});
+      } catch (error) {
+        this.logger.info(`cannot replace audio track due to: ${error.message}`);
+      }
+    } else {
+      this.logger.info(`no AudioVideoController is bound`);
+    }
+
+    return Date.now() - startTimeMs <
+      DefaultDeviceController.permissionGrantedOriginDetectionThresholdMs
+      ? DevicePermission.PermissionGrantedByBrowser
+      : DevicePermission.PermissionGrantedByUser;
+  }
+
+  private async chooseVideoInputDeviceInternal(device: Device, fromAcquire: boolean): Promise<DevicePermission> {
+    const kind = 'video';
+    if (device === null) {
       if (this.activeDevices[kind]) {
         this.releaseMediaStream(this.activeDevices[kind].stream);
         delete this.activeDevices[kind];
@@ -493,43 +552,22 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
       this.activeDevices[kind].matchesConstraints(proposedConstraints) &&
       this.activeDevices[kind].stream.active
     ) {
-      this.logger.info(`reusing existing ${kind} device`);
+      this.logger.info(`reusing existing video device`);
       return DevicePermission.PermissionGrantedPreviously;
     }
+
     const oldStream: MediaStream | null = this.activeDevices[kind]
       ? this.activeDevices[kind].stream
       : null;
-    if (kind === 'audio') {
-      this.releaseMediaStream(oldStream);
-    }
-    let startTimeMs = Date.now();
-    let newDevice: DeviceSelection;
+
+    const startTimeMs = Date.now();
     try {
-      this.logger.info(`requesting new ${kind} device with constraint ${proposedConstraints}`);
-      const stream = this.deviceAsMediaStream(device);
-      if (kind === 'audio' && device === null) {
-        newDevice = new DeviceSelection();
-        newDevice.stream = DefaultDeviceController.createEmptyAudioDevice() as MediaStream;
-        newDevice.constraints = null;
-      } else if (stream) {
-        this.logger.info(`using media stream ${stream.id} for ${kind} device`);
-        newDevice = new DeviceSelection();
-        newDevice.stream = stream;
-        newDevice.constraints = proposedConstraints;
-      } else {
-        newDevice = await this.getDeviceFromBrowser(proposedConstraints);
-        newDevice.stream.getTracks()[0].addEventListener('ended', () => {
-          if (this.activeDevices[kind].stream === newDevice.stream) {
-            this.logger.warn(
-              `${kind} input device which was active is no longer available, resetting to null device`
-            );
-            this.chooseInputDevice(kind, null, false);
-          }
-        });
-      }
+      this.logger.info(`requesting new video device with constraint ${proposedConstraints}`);
+      this.activeDevices[kind] = await this.getDeviceSelection(kind, device, proposedConstraints);
+      this.logger.info(`got video device for constraints ${JSON.stringify(proposedConstraints)}`);
     } catch (error) {
       this.logger.error(
-        `failed to get ${kind} device for constraints ${JSON.stringify(proposedConstraints)}: ${
+        `failed to get video device for constraints ${JSON.stringify(proposedConstraints)}: ${
           error.message
         }`
       );
@@ -538,14 +576,12 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
         ? DevicePermission.PermissionDeniedByBrowser
         : DevicePermission.PermissionDeniedByUser;
     }
-    this.logger.info(`got ${kind} device for constraints ${JSON.stringify(proposedConstraints)}`);
-    const restartVideo =
-      kind === 'video' &&
+
+    if (
       !fromAcquire &&
       this.boundAudioVideoController &&
-      this.boundAudioVideoController.videoTileController.hasStartedLocalVideoTile();
-    this.activeDevices[kind] = newDevice;
-    if (restartVideo) {
+      this.boundAudioVideoController.videoTileController.hasStartedLocalVideoTile()
+    ) {
       this.logger.info('restarting local video to switch to new device');
       this.boundAudioVideoController.restartLocalVideo(() => {
         // TODO: implement MediaStreamDestroyer
@@ -556,25 +592,45 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
           this.releaseMediaStream(oldStream);
         }
       });
-    } else if (kind === 'video') {
-      this.releaseMediaStream(oldStream);
     } else {
-      if (this.useWebAudio) {
-        this.attachAudioInputStreamToAudioContext(this.activeDevices[kind].stream);
-      } else {
-        try {
-          if (this.boundAudioVideoController) {
-            await this.boundAudioVideoController.restartLocalAudio(() => {});
-          }
-        } catch (error) {
-          this.logger.info(`cannot replace audio track due to: ${error.message}`);
-        }
-      }
+      this.releaseMediaStream(oldStream);
     }
+
     return Date.now() - startTimeMs <
       DefaultDeviceController.permissionGrantedOriginDetectionThresholdMs
       ? DevicePermission.PermissionGrantedByBrowser
       : DevicePermission.PermissionGrantedByUser;
+  }
+
+  private async getDeviceSelection(  
+    kind: string,   
+    device: Device | null,   
+    constraints: MediaStreamConstraints | null
+  ): Promise<DeviceSelection> {
+    const deviceSelection: DeviceSelection = new DeviceSelection();
+    deviceSelection.constraints = constraints;
+
+    const stream = this.deviceAsMediaStream(device);
+    if (stream) {
+      this.logger.info(`using media stream ${stream.id} for audio device`);
+      deviceSelection.stream = stream;
+    } else {
+      deviceSelection.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      await this.handleDeviceChange();
+      deviceSelection.stream.getTracks()[0].addEventListener('ended', () => {
+        if (this.activeDevices[kind].stream === deviceSelection.stream) {
+          this.logger.warn(
+            `${kind} input device which was active is no longer available, resetting to null device`
+          );
+          if (kind === 'audio') {
+            this.chooseAudioInputDeviceInternal(device);
+          } else {
+            this.chooseVideoInputDeviceInternal(device, false);
+          }
+        }
+      });
+    }
+    return deviceSelection;
   }
 
   private async bindAudioOutput(): Promise<void> {
@@ -641,16 +697,6 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
     return kind === 'audio' ? { audio: trackConstraints } : { video: trackConstraints };
   }
 
-  private async getDeviceFromBrowser(
-    constraints: MediaStreamConstraints
-  ): Promise<DeviceSelection> {
-    const deviceSelection = new DeviceSelection();
-    deviceSelection.stream = await navigator.mediaDevices.getUserMedia(constraints);
-    deviceSelection.constraints = constraints;
-    await this.handleDeviceChange();
-    return deviceSelection;
-  }
-
   private deviceInfoFromDeviceId(
     deviceKind: string,
     deviceId: string | null
@@ -688,7 +734,14 @@ export default class DefaultDeviceController implements DeviceControllerBasedMed
       // @ts-ignore
       existingConstraints = active.constraints ? active.constraints[kind] : null;
     }
-    const result = await this.chooseInputDevice(kind, existingConstraints, true);
+
+    let result: DevicePermission;
+    if (kind === 'audio') {
+      result = await this.chooseAudioInputDeviceInternal(existingConstraints);
+    } else {
+      result = await this.chooseVideoInputDeviceInternal(existingConstraints, true);
+    }
+
     if (
       result === DevicePermission.PermissionDeniedByBrowser ||
       result === DevicePermission.PermissionDeniedByUser
