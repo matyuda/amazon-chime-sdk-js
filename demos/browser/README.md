@@ -1,6 +1,7 @@
 ## Browser Meeting
 
 This demo shows how to use the Amazon Chime SDK to build meeting applications for browsers.
+Support tls(server.js) and Japanese(app/meetingV2/meetingV2.html).
 
 ### Prerequisites
 
@@ -17,9 +18,13 @@ role with a policy allowing `chime:CreateMeeting`, `chime:DeleteMeeting`, and
 
 1. Navigate to the `demos/browser` folder: `cd demos/browser`
 
-2. Start the demo application: `npm run start`
+2. Get certificate file (ex. Let's encrypt)
 
-3. Open http://localhost:8080 in your browser.
+3. Modify pem file path in server.js(line 11 and 12).
+
+4. Start the demo application as root: `npm run start`. Otherwise fail start.
+
+5. Open https://(domainname) in your browser.
 
 ### Demo applications
 
