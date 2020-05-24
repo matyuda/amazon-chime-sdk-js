@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
-  <title>Meeting Demo</title>
+  <title>ミーティングデモ</title>
 </head>
 <body>
 
@@ -14,20 +14,20 @@
   <div class="text-muted" style="position:fixed;right:3px;bottom:3px" id="sdk-version"></div>
   <div class="container">
     <form id="form-authenticate">
-      <h1 class="h3 mb-3 font-weight-normal">Join a meeting</h1>
+      <h1 class="h3 mb-3 font-weight-normal">ミーティングに参加</h1>
       <div class="row mt-3">
-        <label for="inputMeeting" class="sr-only">Meeting Title</label>
-        <input type="name" id="inputMeeting" class="form-control" placeholder="Meeting Title" required autofocus>
+        <label for="inputMeeting" class="sr-only">会議室名</label>
+        <input type="name" id="inputMeeting" class="form-control" placeholder="会議室名" required autofocus>
       </div>
       <div class="row mt-3">
-        <label for="inputName" class="sr-only">Your Name</label>
-        <input type="name" id="inputName" class="form-control" placeholder="Your Name" required>
+        <label for="inputName" class="sr-only">お名前</label>
+        <input type="name" id="inputName" class="form-control" placeholder="お名前" required>
       </div>
       <div class="row mt-3">
-        <label for="inputRegion" class="sr-only">Media Region</label>
+        <label for="inputRegion" class="sr-only">リージョン選択</label>
         <select id="inputRegion" class="custom-select" style="width:100%">
           <option value="us-east-1" selected>United States (N. Virginia)</option>
-          <option value="ap-northeast-1">Japan (Tokyo)</option>
+          <option value="ap-northeast-1">日本 (東京)</option>
           <option value="ap-southeast-1">Singapore</option>
           <option value="ap-southeast-2">Australia (Sydney)</option>
           <option value="ca-central-1">Canada</option>
@@ -43,12 +43,12 @@
         </select>
       </div>
       <div class="row mt-3">
-        <button id="authenticate" class="btn btn-lg btn-primary btn-block" type="submit">Continue</button>
+        <button id="authenticate" class="btn btn-lg btn-primary btn-block" type="submit">入室</button>
       </div>
       <div class="row mt-3">
-        <p>Anyone with access to the meeting link can join.</p>
+        <!-- <p>Anyone with access to the meeting link can join.</p> -->
       </div>
-      <a id="to-sip-flow" class="row mt-3" href="#">Joining via SIP? Click here.</a>
+      <a id="to-sip-flow" class="row mt-3" href="#"><!-- Joining via SIP? Click here. --></a>
       <div class="row mt-3">
         <div id="progress-authenticate" class="w-100 progress progress-hidden">
           <div class="w-100 progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
@@ -272,10 +272,10 @@
         </div>
       </div>
       <div class="col-4 col-lg-3 order-3 order-lg-3 text-right text-lg-right">
-        <button id="button-meeting-leave" type="button" class="btn btn-outline-success mx-1 mx-xl-2 my-2 px-4" title="Leave meeting">
+        <button id="button-meeting-leave" type="button" class="btn btn-outline-success mx-1 mx-xl-2 my-2 px-4" title="ミーティングを退席">
           ${require('../../node_modules/open-iconic/svg/account-logout.svg').default}
         </button>
-        <button id="button-meeting-end" type="button" class="btn btn-outline-danger mx-1 mx-xl-2 my-2 px-4" title="End meeting">
+        <button id="button-meeting-end" type="button" class="btn btn-outline-danger mx-1 mx-xl-2 my-2 px-4" title="ミーティングを終了">
           ${require('../../node_modules/open-iconic/svg/power-standby.svg').default}
         </button>
       </div>
@@ -286,11 +286,11 @@
           <ul id="roster" class="list-group"></ul>
         </div>
         <div class="message d-flex flex-column pt-3" style="flex: 1 1 auto; overflow: hidden; height: 50%;">
-          <div class="list-group receive-message" id="receive-message" style="flex: 1 1 auto; overflow-y: scroll;
+          <div class="receive-message" id="receive-message" style="flex: 1 1 auto; overflow-y: scroll;
             border: 1px solid rgba(0, 0, 0, 0.125); background-color: #fff"></div>
-          <div class="input-group send-message" style="display:flex;flex:0 0 auto;margin-top:0.2rem">
-            <textarea class="form-control shadow-none" id="send-message" rows="1" placeholder="Type a message (markdown supported)" style="display:inline-block; width:100%;
-              resize:none; border-color: rgba(0, 0, 0, 0.125); outline: none; padding-left: 1.4rem"></textarea>
+          <div class="send-message" style="display:flex;flex:0 0 auto;">
+            <textarea id="send-message" rows="1" placeholder="メッセージの入力" style="display:inline-block; width:100%;
+              resize:none; border-color: rgba(0, 0, 0, 0.125); outline: none"></textarea>
           </div>
         </div>
       </div>
@@ -299,7 +299,7 @@
           <div id="tile-0" style="display:none">
             <video id="video-0" class="w-100 h-100"></video>
             <div id="nameplate-0"></div>
-            <button id="video-pause-0">Pause</button>
+            <button id="video-pause-0">一時停止</button>
           </div>
           <div id="tile-1" style="display:none">
             <video id="video-1" class="w-100 h-100"></video>

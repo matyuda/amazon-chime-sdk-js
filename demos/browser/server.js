@@ -4,15 +4,22 @@
 const AWS = require('aws-sdk');
 const compression = require('compression');
 const fs = require('fs');
-const http = require('http');
+const https = require('https');
 const url = require('url');
 const uuid = require('uuid/v4');
+
+var ssl_server_key = '/etc/letsencrypt/live/{domainname}/privkey.pem';
+var ssl_server_crt = '/etc/letsencrypt/live/{domainname}/cert.pem';
+let options = {
+    key: fs.readFileSync(ssl_server_key),
+    cert: fs.readFileSync(ssl_server_crt)
+};
 
 // Store created meetings in a map so attendees can join by meeting title
 const meetingTable = {};
 
 // Use local host for application server
-const host = '127.0.0.1:8080';
+const host = '0.0.0.0:443';
 
 // Load the contents of the web application to be used as the index page
 const indexPage = fs.readFileSync(`dist/${process.env.npm_config_app || 'meetingV2'}.html`);
@@ -26,7 +33,7 @@ const chime = new AWS.Chime({ region: 'us-east-1' });
 chime.endpoint = new AWS.Endpoint(process.env.ENDPOINT || 'https://service.chime.aws.amazon.com');
 
 // Start an HTTP server to serve the index page and handle meeting actions
-http.createServer({}, async (request, response) => {
+https.createServer(options, async (request, response) => {
   log(`${request.method} ${request.url} BEGIN`);
   try {
     // Enable HTTP compression
