@@ -347,6 +347,9 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
           this.audioVideo.stopVideoPreviewForVideoInput(document.getElementById(
             'video-preview'
           ) as HTMLVideoElement);
+          this.audioVideo.stopVideoPreviewForVideoInput(document.getElementById(
+            'video-preview-mobile'
+          ) as HTMLVideoElement);
           this.audioVideo.chooseVideoInputDevice(null);
           this.hideProgress('progress-join');
           this.displayButtonStates();
@@ -1094,6 +1097,13 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
     if (audioPreview.getAttribute('aria-valuenow') !== `${percent}`) {
       audioPreview.setAttribute('aria-valuenow', `${percent}`);
     }
+
+    const audioPreviewMobile = document.getElementById('audio-preview-mobile');
+    this.updateProperty(audioPreviewMobile.style, 'transitionDuration', '33ms');
+    this.updateProperty(audioPreviewMobile.style, 'width', `${percent}%`);
+    if (audioPreviewMobile.getAttribute('aria-valuenow') !== `${percent}`) {
+      audioPreviewMobile.setAttribute('aria-valuenow', `${percent}`);
+    }
   }
 
   startAudioPreview(): void {
@@ -1104,6 +1114,7 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
     }
     if (!analyserNode.getByteTimeDomainData) {
       document.getElementById('audio-preview').parentElement.style.visibility = 'hidden';
+      document.getElementById('audio-preview-mobile').parentElement.style.visibility = 'hidden';
       return;
     }
     const data = new Uint8Array(analyserNode.fftSize);
@@ -1146,6 +1157,9 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
         this.audioVideo.stopVideoPreviewForVideoInput(document.getElementById(
           'video-preview'
         ) as HTMLVideoElement);
+        this.audioVideo.stopVideoPreviewForVideoInput(document.getElementById(
+          'video-preview-mobile'
+        ) as HTMLVideoElement);
       }
       this.audioVideo.stopLocalVideoTile();
       this.toggleButton('button-camera', 'off');
@@ -1157,6 +1171,9 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
     if (showPreview) {
       this.audioVideo.startVideoPreviewForVideoInput(document.getElementById(
         'video-preview'
+      ) as HTMLVideoElement);
+      this.audioVideo.startVideoPreviewForVideoInput(document.getElementById(
+        'video-preview-mobile'
       ) as HTMLVideoElement);
     }
   }

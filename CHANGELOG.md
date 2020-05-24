@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mark 403 (Forbidden) for fetching turn credentials as terminal error and avoid retrying.
 - Fix Android Pixel3 Chrome Video artifacts on far sites
 - Don't throw the "cannot replace" message if the device controller is not bound to any audio-video controller
+- Display video audio preview for mobile devices
 
 ## [1.6.2] - 2020-05-18
 

@@ -226,7 +226,6 @@ $close-text-shadow: none;
         background-color: $table-active-bg;
       }
     }
-
   }
 }
 
@@ -358,6 +357,10 @@ svg {
   min-width: 320px;
 }
 
+.video-preview-mobile .audio-preview-mobile {
+  display: none;
+}
+
 @media (max-width: 575px) {
   #tile-area {
     display: flex;
@@ -422,6 +425,17 @@ svg {
   .message {
     max-height: 210px;
     height: 210px !important;
+  }
+
+  .video-preview-mobile {
+    display: block;
+    margin-left: 35%;
+  }
+
+  .audio-preview-mobile {
+    display: block;
+    width: 137px;
+    margin-left: 35%;
   }
 }
 
